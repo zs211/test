@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .status-normal { @apply bg-green-100 text-green-800; }
+        .status-warning { @apply bg-yellow-100 text-yellow-800; }
+        .status-critical { @apply bg-red-100 text-red-800; }
+        .status-unknown { @apply bg-gray-100 text-gray-800; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- 页面标题 -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">日志管理</h1>
+            <nav class="text-sm text-gray-600">
+                <a href="/" class="hover:text-blue-600">机器人状态</a>
+                <span class="mx-2">></span>
+                <span class="text-gray-900">日志管理</span>
+            </nav>
+        </div>
+
+        <!-- 存储空间信息 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">存储空间</h2>
+            <div id="storage-info" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-blue-600" id="total-size">加载中...</div>
+                    <div class="text-sm text-gray-600">总大小</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-green-600" id="file-count">加载中...</div>
+                    <div class="text-sm text-gray-600">文件数量</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold" id="warning-level">
+                        <span class="px-3 py-1 rounded-full text-sm">加载中...</span>
+                    </div>
+                    <div class="text-sm text-gray-600">状态</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 文件操作 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-900">日志文件</h2>
+                <div class="space-x-2">
+                    <button id="refresh-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        刷新
+                    </button>
+                    <button id="download-selected-btn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700" disabled>
+                        下载选中
+                    </button>
+                    <button id="delete-selected-btn" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700" disabled>
+                        删除选中
+                    </button>
+                </div>
+            </div>
+
+            <!-- 文件列表 -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full table-auto">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left">
+                                <input type="checkbox" id="select-all" class="rounded">
+                            </th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">文件名</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">大小</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">修改时间</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">状态</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="files-table-body" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                                加载中...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 状态消息 -->
+        <div id="status-message" class="hidden fixed bottom-4 right-4 max-w-sm bg-white border border-gray-200 rounded-lg shadow-lg p-4">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div id="status-icon" class="w-5 h-5"></div>
+                </div>
+                <div class="ml-3">
+                    <p id="status-text" class="text-sm text-gray-700"></p>
+                </div>
+                <div class="ml-auto pl-3">
+                    <button onclick="hideStatusMessage()" class="text-gray-400 hover:text-gray-600">
+                        <span class="sr-only">关闭</span>
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let filesData = [];
+        let selectedFiles = new Set();
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStorageInfo();
+            loadFilesList();
+            setupEventListeners();
+        });
+
+        // 设置事件监听器
+        function setupEventListeners() {
+            document.getElementById('refresh-btn').addEventListener('click', function() {
+                loadStorageInfo();
+                loadFilesList();
+            });
+
+            document.getElementById('select-all').addEventListener('change', function() {
+                const checkboxes = document.querySelectorAll('.file-checkbox');
+                checkboxes.forEach(cb => {
+                    cb.checked = this.checked;
+                    if (this.checked) {
+                        selectedFiles.add(cb.value);
+                    } else {
+                        selectedFiles.delete(cb.value);
+                    }
+                });
+                updateActionButtons();
+            });
+
+            document.getElementById('download-selected-btn').addEventListener('click', downloadSelectedFiles);
+            document.getElementById('delete-selected-btn').addEventListener('click', deleteSelectedFiles);
+        }
+
+        // 加载存储信息
+        async function loadStorageInfo() {
+            try {
+                const response = await fetch('/api/logs/storage');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const logFiles = data.data.log_files;
+                    const overall = data.data.overall;
+                    
+                    document.getElementById('total-size').textContent = logFiles.formatted_size;
+                    document.getElementById('file-count').textContent = logFiles.file_count;
+                    
+                    const warningElement = document.getElementById('warning-level');
+                    const span = warningElement.querySelector('span');
+                    span.textContent = getWarningLevelText(overall.warning_level);
+                    span.className = `px-3 py-1 rounded-full text-sm status-${overall.warning_level}`;
+                }
+            } catch (error) {
+                console.error('加载存储信息失败:', error);
+                showStatusMessage('加载存储信息失败', 'error');
+            }
+        }
+
+        // 加载文件列表
+        async function loadFilesList() {
+            try {
+                const response = await fetch('/api/logs/files?accessible_only=true');
+                const data = await response.json();
+                
+                if (data.success) {
+                    filesData = data.data.files;
+                    renderFilesTable();
+                } else {
+                    throw new Error('获取文件列表失败');
+                }
+            } catch (error) {
+                console.error('加载文件列表失败:', error);
+                showStatusMessage('加载文件列表失败', 'error');
+                document.getElementById('files-table-body').innerHTML = 
+                    '<tr><td colspan="6" class="px-4 py-8 text-center text-red-500">加载失败</td></tr>';
+            }
+        }
+
+        // 渲染文件表格
+        function renderFilesTable() {
+            const tbody = document.getElementById('files-table-body');
+            
+            if (filesData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">没有找到日志文件</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filesData.map(file => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-2">
+                        <input type="checkbox" class="file-checkbox rounded" value="${file.path}" 
+                               onchange="toggleFileSelection('${file.path}', this.checked)">
+                    </td>
+                    <td class="px-4 py-2 text-sm text-gray-900">${file.name}</td>
+                    <td class="px-4 py-2 text-sm text-gray-600">${file.formatted_size}</td>
+                    <td class="px-4 py-2 text-sm text-gray-600">${formatDateTime(file.modified)}</td>
+                    <td class="px-4 py-2">
+                        <span class="px-2 py-1 text-xs rounded-full ${file.is_accessible ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${file.is_accessible ? '可访问' : '不可访问'}
+                        </span>
+                    </td>
+                    <td class="px-4 py-2">
+                        <button onclick="downloadSingleFile('${file.name}')" 
+                                class="text-blue-600 hover:text-blue-800 text-sm mr-2">下载</button>
+                        <button onclick="deleteSingleFile('${file.path}')" 
+                                class="text-red-600 hover:text-red-800 text-sm">删除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 切换文件选择
+        function toggleFileSelection(filePath, selected) {
+            if (selected) {
+                selectedFiles.add(filePath);
+            } else {
+                selectedFiles.delete(filePath);
+            }
+            updateActionButtons();
+        }
+
+        // 更新操作按钮状态
+        function updateActionButtons() {
+            const hasSelection = selectedFiles.size > 0;
+            document.getElementById('download-selected-btn').disabled = !hasSelection;
+            document.getElementById('delete-selected-btn').disabled = !hasSelection;
+        }
+
+        // 下载单个文件
+        function downloadSingleFile(filename) {
+            const url = `/api/logs/download/${encodeURIComponent(filename)}`;
+            window.open(url, '_blank');
+        }
+
+        // 下载选中文件
+        async function downloadSelectedFiles() {
+            if (selectedFiles.size === 0) return;
+
+            try {
+                const response = await fetch('/api/logs/download/batch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        file_paths: Array.from(selectedFiles)
+                    })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `logs_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    
+                    showStatusMessage(`成功下载 ${selectedFiles.size} 个文件`, 'success');
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || '下载失败');
+                }
+            } catch (error) {
+                console.error('批量下载失败:', error);
+                showStatusMessage('批量下载失败: ' + error.message, 'error');
+            }
+        }
+
+        // 删除单个文件
+        async function deleteSingleFile(filePath) {
+            if (!confirm('确定要删除这个文件吗？')) return;
+
+            try {
+                const response = await fetch('/api/logs/files', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        file_paths: [filePath],
+                        confirm: true
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatusMessage('文件删除成功', 'success');
+                    loadStorageInfo();
+                    loadFilesList();
+                } else {
+                    throw new Error(data.error?.message || '删除失败');
+                }
+            } catch (error) {
+                console.error('删除文件失败:', error);
+                showStatusMessage('删除文件失败: ' + error.message, 'error');
+            }
+        }
+
+        // 删除选中文件
+        async function deleteSelectedFiles() {
+            if (selectedFiles.size === 0) return;
+            
+            if (!confirm(`确定要删除选中的 ${selectedFiles.size} 个文件吗？`)) return;
+
+            try {
+                const response = await fetch('/api/logs/files', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        file_paths: Array.from(selectedFiles),
+                        confirm: true
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatusMessage(`成功删除 ${data.data.affected_count} 个文件`, 'success');
+                    selectedFiles.clear();
+                    loadStorageInfo();
+                    loadFilesList();
+                } else {
+                    throw new Error(data.error?.message || '删除失败');
+                }
+            } catch (error) {
+                console.error('批量删除失败:', error);
+                showStatusMessage('批量删除失败: ' + error.message, 'error');
+            }
+        }
+
+        // 显示状态消息
+        function showStatusMessage(message, type = 'info') {
+            const messageEl = document.getElementById('status-message');
+            const textEl = document.getElementById('status-text');
+            const iconEl = document.getElementById('status-icon');
+            
+            textEl.textContent = message;
+            
+            // 设置图标和颜色
+            if (type === 'success') {
+                iconEl.innerHTML = '<svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>';
+            } else if (type === 'error') {
+                iconEl.innerHTML = '<svg class="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>';
+            } else {
+                iconEl.innerHTML = '<svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>';
+            }
+            
+            messageEl.classList.remove('hidden');
+            
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                messageEl.classList.add('hidden');
+            }, 3000);
+        }
+
+        // 隐藏状态消息
+        function hideStatusMessage() {
+            document.getElementById('status-message').classList.add('hidden');
+        }
+
+        // 格式化日期时间
+        function formatDateTime(dateString) {
+            if (!dateString) return '未知';
+            const date = new Date(dateString);
+            return date.toLocaleString('zh-CN');
+        }
+
+        // 获取警告级别文本
+        function getWarningLevelText(level) {
+            const levels = {
+                'normal': '正常',
+                'warning': '警告',
+                'critical': '严重',
+                'unknown': '未知'
+            };
+            return levels[level] || '未知';
+        }
+    </script>
+</body>
+</html>
