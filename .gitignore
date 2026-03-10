@@ -1,0 +1,9 @@
+.vscode/
+./history/
+.vs/
+__pycache__/
+**/__pycache__/
+**/build/
+**/dist/
+*.spec
+tmp/
