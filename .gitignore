@@ -7,3 +7,5 @@ __pycache__/
 **/dist/
 *.spec
 tmp/
+**/.tar.gz
+ medical-qa-v1.0.0.tar.gz
