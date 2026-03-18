@@ -1,2 +1,2 @@
 # nothing
- 只是用来记录的废弃仓
+ This is just an abandoned repository for record-keeping.
