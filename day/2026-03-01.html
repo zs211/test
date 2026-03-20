@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,6 +13,7 @@
         .status-unknown { @apply bg-gray-100 text-gray-800; } */
     </style>
 </head>
+
 <body class="bg-gray-50 min-h-screen">
     <div class="container mx-auto px-4 py-8">
         <!-- 页面标题 -->
@@ -53,10 +55,12 @@
                     <button id="refresh-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                         刷新
                     </button>
-                    <button id="download-selected-btn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700" disabled>
+                    <button id="download-selected-btn"
+                        class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700" disabled>
                         下载选中
                     </button>
-                    <button id="delete-selected-btn" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700" disabled>
+                    <button id="delete-selected-btn" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                        disabled>
                         删除选中
                     </button>
                 </div>
@@ -89,7 +93,8 @@
         </div>
 
         <!-- 状态消息 -->
-        <div id="status-message" class="hidden fixed bottom-4 right-4 max-w-sm bg-white border border-gray-200 rounded-lg shadow-lg p-4">
+        <div id="status-message"
+            class="hidden fixed bottom-4 right-4 max-w-sm bg-white border border-gray-200 rounded-lg shadow-lg p-4">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
                     <div id="status-icon" class="w-5 h-5"></div>
@@ -101,7 +106,9 @@
                     <button onclick="hideStatusMessage()" class="text-gray-400 hover:text-gray-600">
                         <span class="sr-only">关闭</span>
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                            <path fill-rule="evenodd"
+                                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                clip-rule="evenodd"></path>
                         </svg>
                     </button>
                 </div>
@@ -115,7 +122,7 @@
         let selectedFiles = new Set();
 
         // 页面加载时初始化
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             loadStorageInfo();
             loadFilesList();
             setupEventListeners();
@@ -123,12 +130,12 @@
 
         // 设置事件监听器
         function setupEventListeners() {
-            document.getElementById('refresh-btn').addEventListener('click', function() {
+            document.getElementById('refresh-btn').addEventListener('click', function () {
                 loadStorageInfo();
                 loadFilesList();
             });
 
-            document.getElementById('select-all').addEventListener('change', function() {
+            document.getElementById('select-all').addEventListener('change', function () {
                 const checkboxes = document.querySelectorAll('.file-checkbox');
                 checkboxes.forEach(cb => {
                     cb.checked = this.checked;
@@ -150,14 +157,14 @@
             try {
                 const response = await fetch('/api/logs/storage');
                 const data = await response.json();
-                
+
                 if (data.success) {
                     const logFiles = data.data.log_files;
                     const overall = data.data.overall;
-                    
+
                     document.getElementById('total-size').textContent = logFiles.formatted_size;
                     document.getElementById('file-count').textContent = logFiles.file_count;
-                    
+
                     const warningElement = document.getElementById('warning-level');
                     const span = warningElement.querySelector('span');
                     span.textContent = getWarningLevelText(overall.warning_level);
@@ -174,7 +181,7 @@
             try {
                 const response = await fetch('/api/logs/files?accessible_only=true');
                 const data = await response.json();
-                
+
                 if (data.success) {
                     filesData = data.data.files;
                     renderFilesTable();
@@ -184,7 +191,7 @@
             } catch (error) {
                 console.error('加载文件列表失败:', error);
                 showStatusMessage('加载文件列表失败', 'error');
-                document.getElementById('files-table-body').innerHTML = 
+                document.getElementById('files-table-body').innerHTML =
                     '<tr><td colspan="6" class="px-4 py-8 text-center text-red-500">加载失败</td></tr>';
             }
         }
@@ -192,7 +199,7 @@
         // 渲染文件表格
         function renderFilesTable() {
             const tbody = document.getElementById('files-table-body');
-            
+
             if (filesData.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">没有找到日志文件</td></tr>';
                 return;
@@ -270,7 +277,7 @@
                     a.click();
                     document.body.removeChild(a);
                     window.URL.revokeObjectURL(url);
-                    
+
                     showStatusMessage(`成功下载 ${selectedFiles.size} 个文件`, 'success');
                 } else {
                     const errorData = await response.json();
@@ -299,7 +306,7 @@
                 });
 
                 const data = await response.json();
-                
+
                 if (data.success) {
                     showStatusMessage('文件删除成功', 'success');
                     loadStorageInfo();
@@ -316,7 +323,7 @@
         // 删除选中文件
         async function deleteSelectedFiles() {
             if (selectedFiles.size === 0) return;
-            
+
             if (!confirm(`确定要删除选中的 ${selectedFiles.size} 个文件吗？`)) return;
 
             try {
@@ -332,7 +339,7 @@
                 });
 
                 const data = await response.json();
-                
+
                 if (data.success) {
                     showStatusMessage(`成功删除 ${data.data.affected_count} 个文件`, 'success');
                     selectedFiles.clear();
@@ -352,9 +359,9 @@
             const messageEl = document.getElementById('status-message');
             const textEl = document.getElementById('status-text');
             const iconEl = document.getElementById('status-icon');
-            
+
             textEl.textContent = message;
-            
+
             // 设置图标和颜色
             if (type === 'success') {
                 iconEl.innerHTML = '<svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>';
@@ -363,9 +370,9 @@
             } else {
                 iconEl.innerHTML = '<svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>';
             }
-            
+
             messageEl.classList.remove('hidden');
-            
+
             // 3秒后自动隐藏
             setTimeout(() => {
                 messageEl.classList.add('hidden');
@@ -396,4 +403,5 @@
         }
     </script>
 </body>
+
 </html>
