@@ -1,0 +1,12 @@
+# CMake 最低版本
+cmake_minimum_required(VERSION 3.10)
+
+# 项目名称
+project(calculator)
+
+# 生成可执行文件：calc + 所有 cpp 文件
+add_executable(calc
+    main.cpp
+    add.cpp
+    sub.cpp
+)

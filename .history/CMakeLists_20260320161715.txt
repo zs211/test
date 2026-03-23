@@ -1,0 +1,8 @@
+# CMake 最低版本要求
+cmake_minimum_required(VERSION 3.10)
+
+# 项目名称（随便起）
+project(MyFirstApp)
+
+# 生成可执行文件：可执行文件名字 + 源代码文件
+add_executable(my_app main.cpp)
