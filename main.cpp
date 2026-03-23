@@ -8,8 +8,9 @@ void welcome() {
 
 int main() {
     welcome();
-
-    int a = 20, b = 10;
+    cout << "请输入两个数字：" << endl;
+    int a, b;
+    cin >> a >> b;
 
     cout << a << " + " << b << " = " << add(a, b) << endl;
     cout << a << " - " << b << " = " << sub(a, b) << endl;
